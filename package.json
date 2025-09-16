@@ -1,0 +1,17 @@
+{
+  "name": "crosspay-miniapp",
+  "version": "1.0.0",
+  "description": "CrossPay Mini App for Base App ecosystem",
+  "main": "index.html",
+  "scripts": {
+    "start": "python -m http.server 3000",
+    "build": "echo 'Static build ready'",
+    "deploy": "echo 'Ready for deployment'"
+  },
+  "keywords": ["base", "miniapp", "payments", "crypto", "qr"],
+  "author": "CrossPay Team",
+  "license": "MIT",
+  "dependencies": {
+    "@minikit/js": "latest"
+  }
+}
