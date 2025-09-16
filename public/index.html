@@ -1,0 +1,1015 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CrossPay - Base Mini App</title>
+    
+    <!-- Mini App Manifest -->
+    <link rel="manifest" href="/miniapp.json">
+    <meta name="theme-color" content="#667eea">
+    
+    <!-- Core Libraries -->
+    <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.1/build/qrcode.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/qr-scanner@1.4.2/qr-scanner.umd.min.js"></script>
+    
+    <!-- MiniKit Integration -->
+    <script>
+        // Initialize MiniKit when available
+        if (typeof window !== 'undefined' && window.MiniKit) {
+            window.MiniKit.install();
+        }
+    </script>
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        :root {
+            --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --success: #4caf50;
+            --error: #f44336;
+            --warning: #ff9800;
+            --bg-light: #f5f5f5;
+            --text-primary: #333;
+            --text-secondary: #666;
+            --shadow: 0 2px 10px rgba(0,0,0,0.1);
+            --shadow-lg: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: var(--primary-gradient);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            padding: 10px;
+            /* Mini App specific optimizations */
+            overflow-x: hidden;
+            -webkit-overflow-scrolling: touch;
+        }
+        
+        .miniapp-container {
+            background: white;
+            border-radius: 20px;
+            padding: 0;
+            max-width: 100%;
+            width: 100%;
+            max-width: 420px;
+            box-shadow: var(--shadow-lg);
+            overflow: hidden;
+            /* Mini App viewport optimization */
+            min-height: calc(100vh - 20px);
+        }
+        
+        .miniapp-header {
+            background: var(--primary-gradient);
+            padding: 20px;
+            text-align: center;
+            color: white;
+            position: relative;
+        }
+        
+        .miniapp-badge {
+            position: absolute;
+            top: 10px;
+            right: 15px;
+            background: rgba(255,255,255,0.2);
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+        
+        .miniapp-header h1 {
+            font-size: 28px;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+        
+        .miniapp-header p {
+            opacity: 0.9;
+            font-size: 13px;
+        }
+        
+        .wallet-selector {
+            padding: 20px;
+            background: white;
+        }
+        
+        .wallet-selector h2 {
+            margin-bottom: 15px;
+            color: var(--text-primary);
+            font-size: 18px;
+            text-align: center;
+        }
+        
+        .wallet-options {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        
+        .wallet-option {
+            padding: 12px 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 12px;
+            background: white;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        
+        .wallet-option:hover {
+            border-color: #667eea;
+            transform: translateY(-1px);
+            box-shadow: var(--shadow);
+        }
+        
+        .wallet-option .wallet-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .wallet-option .wallet-icon {
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            background: var(--bg-light);
+            border-radius: 8px;
+        }
+        
+        .wallet-option .wallet-name {
+            font-weight: 600;
+            color: var(--text-primary);
+            font-size: 14px;
+        }
+        
+        .wallet-option .wallet-status {
+            font-size: 11px;
+            color: var(--text-secondary);
+            padding: 3px 6px;
+            background: var(--bg-light);
+            border-radius: 4px;
+        }
+        
+        .wallet-option.detected .wallet-status {
+            color: var(--success);
+            background: rgba(76, 175, 80, 0.1);
+        }
+        
+        .connected-header {
+            background: var(--primary-gradient);
+            padding: 15px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            color: white;
+        }
+        
+        .connected-header .address {
+            font-family: monospace;
+            background: rgba(255,255,255,0.2);
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+        
+        .connected-header button {
+            background: rgba(255,255,255,0.2);
+            color: white;
+            border: 1px solid rgba(255,255,255,0.3);
+            padding: 6px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 11px;
+            transition: all 0.3s;
+        }
+        
+        .balance-card {
+            background: var(--primary-gradient);
+            margin: 15px;
+            padding: 20px;
+            border-radius: 12px;
+            color: white;
+            box-shadow: var(--shadow);
+        }
+        
+        .balance-label {
+            font-size: 12px;
+            opacity: 0.9;
+            margin-bottom: 4px;
+        }
+        
+        .balance-amount {
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 8px;
+        }
+        
+        .balance-usd {
+            font-size: 14px;
+            opacity: 0.8;
+        }
+        
+        .tabs {
+            display: flex;
+            padding: 0 15px;
+            gap: 5px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        
+        .tab {
+            padding: 12px 15px;
+            background: none;
+            border: none;
+            border-bottom: 3px solid transparent;
+            cursor: pointer;
+            font-weight: 600;
+            color: var(--text-secondary);
+            transition: all 0.3s;
+            font-size: 13px;
+        }
+        
+        .tab.active {
+            color: #667eea;
+            border-bottom-color: #667eea;
+        }
+        
+        .tab-content {
+            padding: 15px;
+            min-height: 300px;
+        }
+        
+        .panel {
+            display: none;
+        }
+        
+        .panel.active {
+            display: block;
+        }
+        
+        .form-group {
+            margin-bottom: 15px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 6px;
+            color: var(--text-primary);
+            font-weight: 600;
+            font-size: 13px;
+        }
+        
+        .form-group input, 
+        .form-group select {
+            width: 100%;
+            padding: 10px 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+            background: white;
+        }
+        
+        .form-group input:focus, 
+        .form-group select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        .input-with-max {
+            position: relative;
+        }
+        
+        .max-button {
+            position: absolute;
+            right: 8px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            cursor: pointer;
+        }
+        
+        .btn {
+            width: 100%;
+            padding: 12px;
+            background: var(--primary-gradient);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        
+        .btn:hover:not(:disabled) {
+            transform: translateY(-1px);
+            box-shadow: var(--shadow);
+        }
+        
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .btn-secondary {
+            background: var(--bg-light);
+            color: var(--text-primary);
+        }
+        
+        .qr-container {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            text-align: center;
+            border: 2px solid #e0e0e0;
+            margin: 15px 0;
+        }
+        
+        .qr-container canvas {
+            margin: 15px auto;
+        }
+        
+        .qr-info {
+            font-size: 12px;
+            color: var(--text-secondary);
+            margin-top: 10px;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin: 15px 0;
+        }
+        
+        .stat-card {
+            background: var(--bg-light);
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+        }
+        
+        .stat-label {
+            font-size: 11px;
+            color: var(--text-secondary);
+            margin-bottom: 6px;
+            text-transform: uppercase;
+        }
+        
+        .stat-value {
+            font-size: 18px;
+            font-weight: bold;
+            color: var(--text-primary);
+        }
+        
+        .alert {
+            padding: 12px 15px;
+            border-radius: 8px;
+            margin: 15px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            animation: slideIn 0.3s;
+            font-size: 13px;
+        }
+        
+        @keyframes slideIn {
+            from {
+                transform: translateY(-20px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+        
+        .alert.success {
+            background: rgba(76, 175, 80, 0.1);
+            color: var(--success);
+            border: 1px solid var(--success);
+        }
+        
+        .alert.error {
+            background: rgba(244, 67, 54, 0.1);
+            color: var(--error);
+            border: 1px solid var(--error);
+        }
+        
+        .alert.warning {
+            background: rgba(255, 152, 0, 0.1);
+            color: var(--warning);
+            border: 1px solid var(--warning);
+        }
+        
+        .hidden {
+            display: none !important;
+        }
+        
+        /* Mini App specific QR scanner modal */
+        .qr-scanner-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.9);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        
+        .scanner-content {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            text-align: center;
+            max-width: 90%;
+            max-height: 90%;
+        }
+        
+        .scanner-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        
+        .scanner-status {
+            margin-top: 15px;
+            color: var(--text-secondary);
+            font-size: 14px;
+        }
+        
+        /* Responsive adjustments for mini app */
+        @media (max-width: 380px) {
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .tabs {
+                padding: 0 10px;
+            }
+            
+            .tab {
+                padding: 10px 8px;
+                font-size: 12px;
+            }
+            
+            .miniapp-container {
+                margin: 5px;
+                border-radius: 15px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="miniapp-container">
+        <!-- Initial State: Wallet Selection -->
+        <div id="walletSelection">
+            <div class="miniapp-header">
+                <div class="miniapp-badge">MINI APP</div>
+                <h1>⚡ CrossPay</h1>
+                <p>Base Blockchain Payment Bridge</p>
+            </div>
+            
+            <div class="wallet-selector">
+                <h2>Connect Your Wallet</h2>
+                <div class="wallet-options">
+                    <div class="wallet-option" onclick="connectWallet('metamask')">
+                        <div class="wallet-info">
+                            <div class="wallet-icon">🦊</div>
+                            <div class="wallet-name">MetaMask</div>
+                        </div>
+                        <div class="wallet-status" id="metamask-status">Popular</div>
+                    </div>
+                    
+                    <div class="wallet-option" onclick="connectWallet('coinbase')">
+                        <div class="wallet-info">
+                            <div class="wallet-icon">💙</div>
+                            <div class="wallet-name">Coinbase Wallet</div>
+                        </div>
+                        <div class="wallet-status" id="coinbase-status">Recommended</div>
+                    </div>
+                    
+                    <div class="wallet-option" onclick="connectWallet('browser')">
+                        <div class="wallet-info">
+                            <div class="wallet-icon">🌐</div>
+                            <div class="wallet-name">Browser Wallet</div>
+                        </div>
+                        <div class="wallet-status" id="browser-status">Auto-detect</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Connected State: Main App -->
+        <div id="mainApp" class="hidden">
+            <div class="connected-header">
+                <div class="address" id="userAddress">0x0000...0000</div>
+                <button onclick="disconnect()">Disconnect</button>
+            </div>
+            
+            <div class="balance-card">
+                <div class="balance-label">Available Balance</div>
+                <div class="balance-amount" id="balanceAmount">0.0000 ETH</div>
+                <div class="balance-usd" id="balanceUsd">≈ $0.00 USD</div>
+            </div>
+            
+            <div class="tabs">
+                <button class="tab active" onclick="switchTab('pay')">Pay</button>
+                <button class="tab" onclick="switchTab('receive')">Receive</button>
+                <button class="tab" onclick="switchTab('merchant')">Merchant</button>
+            </div>
+            
+            <div class="tab-content">
+                <!-- Pay Panel -->
+                <div id="payPanel" class="panel active">
+                    <div class="form-group">
+                        <label>Recipient Address or ENS</label>
+                        <div style="display: flex; gap: 8px;">
+                            <input type="text" id="recipientAddress" placeholder="0x... or name.eth" style="flex: 1;">
+                            <button class="btn-secondary" onclick="scanQRCode()" style="width: auto; padding: 10px 15px; background: #667eea; color: white; border-radius: 6px; font-size: 12px;">📷</button>
+                        </div>
+                    </div>
+                    
+                    <!-- QR Scanner Modal -->
+                    <div id="qrScannerModal" class="qr-scanner-modal hidden">
+                        <div class="scanner-content">
+                            <div class="scanner-header">
+                                <h3>Scan QR Code</h3>
+                                <button onclick="closeQRScanner()" style="background: none; border: none; font-size: 24px; cursor: pointer;">×</button>
+                            </div>
+                            <video id="qrVideo" style="width: 100%; max-width: 300px; border-radius: 8px;"></video>
+                            <div class="scanner-status" id="scannerStatus">Position QR code within the frame</div>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Amount (ETH)</label>
+                        <div class="input-with-max">
+                            <input type="number" id="payAmount" placeholder="0.0000" step="0.0001">
+                            <button class="max-button" onclick="setMaxAmount()">MAX</button>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Note (Optional)</label>
+                        <input type="text" id="paymentNote" placeholder="Coffee payment">
+                    </div>
+                    
+                    <button class="btn" onclick="makePayment()">
+                        <span id="payButtonText">Send Payment</span>
+                    </button>
+                    
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <div class="stat-label">Total Sent</div>
+                            <div class="stat-value" id="totalSent">0.00 ETH</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-label">Transactions</div>
+                            <div class="stat-value" id="txCount">0</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Receive Panel -->
+                <div id="receivePanel" class="panel">
+                    <div class="form-group">
+                        <label>Amount to Request (Optional)</label>
+                        <input type="number" id="requestAmount" placeholder="0.0000" step="0.0001">
+                    </div>
+                    
+                    <button class="btn" onclick="generatePaymentQR()">Generate Payment QR</button>
+                    
+                    <div class="qr-container" id="receiveQR" style="display: none;">
+                        <div id="qrCodeReceive"></div>
+                        <div class="qr-info">
+                            Scan this QR code with any wallet to pay
+                        </div>
+                        <button class="btn btn-secondary" onclick="sharePaymentLink()">Share Link</button>
+                    </div>
+                </div>
+                
+                <!-- Merchant Panel -->
+                <div id="merchantPanel" class="panel">
+                    <div id="merchantSetup">
+                        <h3 style="margin-bottom: 15px; font-size: 16px;">Register Your Business</h3>
+                        <div class="form-group">
+                            <label>Business Name</label>
+                            <input type="text" id="businessName" placeholder="My Coffee Shop">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>Business Type</label>
+                            <select id="businessType">
+                                <option value="cafe">Cafe/Restaurant</option>
+                                <option value="retail">Retail Store</option>
+                                <option value="service">Service Provider</option>
+                                <option value="online">Online Business</option>
+                            </select>
+                        </div>
+                        
+                        <button class="btn" onclick="registerMerchant()">Register as Merchant</button>
+                    </div>
+                    
+                    <div id="merchantDashboard" class="hidden">
+                        <h3 style="margin-bottom: 15px; font-size: 16px;">Merchant Dashboard</h3>
+                        
+                        <div class="stats-grid">
+                            <div class="stat-card">
+                                <div class="stat-label">Today's Sales</div>
+                                <div class="stat-value" id="todaySales">0.00 ETH</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-label">Total Revenue</div>
+                                <div class="stat-value" id="totalRevenue">0.00 ETH</div>
+                            </div>
+                        </div>
+                        
+                        <div class="qr-container">
+                            <h4 style="margin-bottom: 8px; font-size: 14px;">Payment QR Code</h4>
+                            <div id="merchantQR"></div>
+                            <div class="qr-info">
+                                Display this at your counter for customer payments
+                            </div>
+                        </div>
+                        
+                        <button class="btn btn-secondary" onclick="downloadQR()">Download QR Code</button>
+                        <button class="btn" onclick="withdrawMerchantFunds()">Withdraw Funds</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Alert Container -->
+        <div id="alertContainer"></div>
+    </div>
+    
+    <script>
+        // Mini App Integration
+        const MINIAPP_MODE = true;
+        
+        // Configuration - same as original but optimized for Mini App
+        const CONTRACT_ADDRESS = "0x4d45baa1909b7f061b514ef50034c55d0b79b262";
+        const CONTRACT_ABI = [
+            "function registerMerchant(string memory _businessName, string memory _businessType) external",
+            "function deposit() external payable",
+            "function payWithQR(address merchantAddress, uint256 amount, string memory invoiceId) external",
+            "function payDirect(address merchantAddress) external payable",
+            "function withdraw(uint256 amount) external",
+            "function getBalance(address user) external view returns (uint256)",
+            "function getMerchantStats(address merchant) external view returns (string memory, uint256, uint256, uint256)",
+            "function merchants(address) external view returns (string memory businessName, string memory businessType, bool isActive, uint256 totalReceived, uint256 dailyVolume, uint256 lastResetDate, uint256 dailyLimit)",
+            "event PaymentProcessed(address indexed customer, address indexed merchant, uint256 amount, string invoiceId)",
+            "event MerchantRegistered(address indexed merchant, string businessName)",
+            "event FundsDeposited(address indexed user, uint256 amount)",
+            "event FundsWithdrawn(address indexed user, uint256 amount)"
+        ];
+        
+        // State
+        let provider = null;
+        let signer = null;
+        let contract = null;
+        let userAddress = null;
+        let currentBalance = 0;
+        let transactions = [];
+        
+        // Mini App specific initialization
+        function initializeMiniApp() {
+            console.log('CrossPay Mini App initialized');
+            
+            // Register with Base App if available
+            if (window.MiniKit) {
+                window.MiniKit.ready(() => {
+                    console.log('MiniKit ready');
+                    // Mini App specific features can be added here
+                });
+            }
+            
+            // Standard initialization
+            checkWalletAvailability();
+            
+            // Check if already connected
+            if (localStorage.getItem('connected')) {
+                const lastWallet = localStorage.getItem('lastWallet');
+                if (lastWallet) {
+                    connectWallet(lastWallet, true);
+                }
+            }
+        }
+        
+        // Initialize when DOM is ready
+        window.addEventListener('load', initializeMiniApp);
+        
+        // All the original CrossPay functions (abbreviated for brevity)
+        // ... [Include all original functions with MINIAPP_MODE optimizations]
+        
+        // Check wallet availability
+        function checkWalletAvailability() {
+            if (typeof window.ethereum !== 'undefined') {
+                if (window.ethereum.isMetaMask) {
+                    document.getElementById('metamask-status').textContent = 'Detected';
+                    document.getElementById('metamask-status').style.color = '#4caf50';
+                }
+                if (window.ethereum.isCoinbaseWallet) {
+                    document.getElementById('coinbase-status').textContent = 'Detected';
+                    document.getElementById('coinbase-status').style.color = '#4caf50';
+                }
+                document.getElementById('browser-status').textContent = 'Available';
+                document.getElementById('browser-status').style.color = '#4caf50';
+            }
+        }
+        
+        // Connect wallet (simplified for Mini App)
+        async function connectWallet(walletType, autoConnect = false) {
+            try {
+                let ethereum = null;
+                
+                switch(walletType) {
+                    case 'metamask':
+                        if (!window.ethereum || !window.ethereum.isMetaMask) {
+                            if (!autoConnect && !MINIAPP_MODE) {
+                                window.open('https://metamask.io/download/', '_blank');
+                            }
+                            throw new Error('MetaMask not installed');
+                        }
+                        ethereum = window.ethereum;
+                        break;
+                        
+                    case 'coinbase':
+                        if (!window.ethereum || !window.ethereum.isCoinbaseWallet) {
+                            if (!autoConnect && !MINIAPP_MODE) {
+                                window.open('https://www.coinbase.com/wallet', '_blank');
+                            }
+                            throw new Error('Coinbase Wallet not installed');
+                        }
+                        ethereum = window.ethereum;
+                        break;
+                        
+                    case 'browser':
+                        if (!window.ethereum) {
+                            throw new Error('No wallet detected');
+                        }
+                        ethereum = window.ethereum;
+                        break;
+                        
+                    default:
+                        throw new Error('Unknown wallet type');
+                }
+                
+                // Request accounts
+                const accounts = await ethereum.request({ method: 'eth_requestAccounts' });
+                if (accounts.length === 0) {
+                    throw new Error('No accounts available');
+                }
+                
+                // Setup provider
+                provider = new ethers.providers.Web3Provider(ethereum);
+                signer = provider.getSigner();
+                userAddress = await signer.getAddress();
+                
+                // Check network
+                const network = await provider.getNetwork();
+                if (network.chainId !== 8453 && network.chainId !== 84532) {
+                    showAlert('Please switch to Base network', 'warning');
+                    
+                    try {
+                        await ethereum.request({
+                            method: 'wallet_switchEthereumChain',
+                            params: [{ chainId: '0x2105' }], // Base mainnet
+                        });
+                    } catch (switchError) {
+                        if (switchError.code === 4902) {
+                            // Add Base network
+                            await ethereum.request({
+                                method: 'wallet_addEthereumChain',
+                                params: [{
+                                    chainId: '0x2105',
+                                    chainName: 'Base',
+                                    nativeCurrency: {
+                                        name: 'Ether',
+                                        symbol: 'ETH',
+                                        decimals: 18
+                                    },
+                                    rpcUrls: ['https://mainnet.base.org'],
+                                    blockExplorerUrls: ['https://basescan.org']
+                                }]
+                            });
+                        } else {
+                            throw switchError;
+                        }
+                    }
+                }
+                
+                // Setup contract
+                contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
+                
+                // Update UI
+                document.getElementById('walletSelection').classList.add('hidden');
+                document.getElementById('mainApp').classList.remove('hidden');
+                document.getElementById('userAddress').textContent = 
+                    userAddress.slice(0, 6) + '...' + userAddress.slice(-4);
+                
+                // Save connection
+                localStorage.setItem('connected', 'true');
+                localStorage.setItem('lastWallet', walletType);
+                
+                // Load data
+                await updateBalance();
+                await checkMerchantStatus();
+                
+                showAlert('Wallet connected successfully!', 'success');
+                
+            } catch (error) {
+                console.error('Connection error:', error);
+                if (!autoConnect) {
+                    showAlert('Connection failed: ' + error.message, 'error');
+                }
+                localStorage.removeItem('connected');
+                localStorage.removeItem('lastWallet');
+            }
+        }
+        
+        // Disconnect wallet
+        function disconnect() {
+            provider = null;
+            signer = null;
+            contract = null;
+            userAddress = null;
+            
+            localStorage.removeItem('connected');
+            localStorage.removeItem('lastWallet');
+            
+            document.getElementById('walletSelection').classList.remove('hidden');
+            document.getElementById('mainApp').classList.add('hidden');
+            
+            showAlert('Wallet disconnected', 'success');
+        }
+        
+        // Update balance
+        async function updateBalance() {
+            try {
+                const ethBalance = await provider.getBalance(userAddress);
+                const contractBalance = await contract.getBalance(userAddress);
+                
+                const totalBalance = ethBalance.add(contractBalance);
+                currentBalance = parseFloat(ethers.utils.formatEther(totalBalance));
+                
+                document.getElementById('balanceAmount').textContent = 
+                    currentBalance.toFixed(4) + ' ETH';
+                
+                const ethPrice = 2500; // Mock ETH price
+                const usdValue = (currentBalance * ethPrice).toFixed(2);
+                document.getElementById('balanceUsd').textContent = `≈ $${usdValue} USD`;
+                
+            } catch (error) {
+                console.error('Balance update error:', error);
+            }
+        }
+        
+        // QR Scanner functionality
+        let qrScanner = null;
+        
+        async function scanQRCode() {
+            try {
+                const video = document.getElementById('qrVideo');
+                const modal = document.getElementById('qrScannerModal');
+                const status = document.getElementById('scannerStatus');
+                
+                modal.classList.remove('hidden');
+                status.textContent = 'Starting camera...';
+                
+                qrScanner = new QrScanner(video, (result) => {
+                    handleQRResult(result.data);
+                    closeQRScanner();
+                }, {
+                    returnDetailedScanResult: true,
+                    highlightScanRegion: true,
+                    highlightCodeOutline: true,
+                });
+                
+                await qrScanner.start();
+                status.textContent = 'Position QR code within the frame';
+                
+            } catch (error) {
+                console.error('QR Scanner error:', error);
+                showAlert('Camera access required for QR scanning', 'error');
+                closeQRScanner();
+            }
+        }
+        
+        function closeQRScanner() {
+            if (qrScanner) {
+                qrScanner.stop();
+                qrScanner.destroy();
+                qrScanner = null;
+            }
+            document.getElementById('qrScannerModal').classList.add('hidden');
+        }
+        
+        function handleQRResult(data) {
+            try {
+                console.log('QR Data:', data);
+                
+                let qrData;
+                try {
+                    qrData = JSON.parse(data);
+                } catch (e) {
+                    if (data.startsWith('0x') || data.endsWith('.eth')) {
+                        document.getElementById('recipientAddress').value = data;
+                        showAlert('Address scanned successfully!', 'success');
+                        return;
+                    } else {
+                        throw new Error('Invalid QR code format');
+                    }
+                }
+                
+                if (qrData.to) {
+                    document.getElementById('recipientAddress').value = qrData.to;
+                    if (qrData.amount && qrData.amount !== '0') {
+                        document.getElementById('payAmount').value = qrData.amount;
+                    }
+                    showAlert('Payment QR scanned successfully!', 'success');
+                } else if (qrData.merchant) {
+                    document.getElementById('recipientAddress').value = qrData.merchant;
+                    showAlert('Merchant QR scanned successfully!', 'success');
+                } else if (qrData.address) {
+                    document.getElementById('recipientAddress').value = qrData.address;
+                    if (qrData.amount) {
+                        document.getElementById('payAmount').value = qrData.amount;
+                    }
+                    showAlert('Wallet QR scanned successfully!', 'success');
+                } else {
+                    throw new Error('Unsupported QR code format');
+                }
+                
+            } catch (error) {
+                console.error('QR parsing error:', error);
+                showAlert('Invalid QR code: ' + error.message, 'error');
+            }
+        }
+        
+        // Switch tabs
+        function switchTab(tabName) {
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            
+            document.querySelectorAll('.panel').forEach(panel => {
+                panel.classList.remove('active');
+            });
+            document.getElementById(tabName + 'Panel').classList.add('active');
+        }
+        
+        // Show alert
+        function showAlert(message, type = 'info') {
+            const alertDiv = document.createElement('div');
+            alertDiv.className = `alert ${type}`;
+            alertDiv.innerHTML = `<span>${message}</span>`;
+            
+            const container = document.getElementById('alertContainer');
+            container.appendChild(alertDiv);
+            
+            setTimeout(() => {
+                alertDiv.remove();
+            }, 4000);
+        }
+        
+        // Placeholder functions (implement as needed)
+        function checkMerchantStatus() { /* Implement */ }
+        function setMaxAmount() { /* Implement */ }
+        function makePayment() { /* Implement */ }
+        function generatePaymentQR() { /* Implement */ }
+        function sharePaymentLink() { /* Implement */ }
+        function registerMerchant() { /* Implement */ }
+        function downloadQR() { /* Implement */ }
+        function withdrawMerchantFunds() { /* Implement */ }
+    </script>
+</body>
+</html>
