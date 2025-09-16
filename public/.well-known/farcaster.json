@@ -1,0 +1,52 @@
+{
+  "accountAssociation": {
+    "header": "eyJmaWQiOjEyMzQ1LCJ0eXBlIjoiY3VzdG9keSIsImtleSI6IjB4YmQ5ZjQyZjY5YjVkMTQ5YWJkNGY4MTgwOWMwNzVjNGZhNjc0MGI4MCJ9",
+    "payload": "eyJkb21haW4iOiJjcm9zc3BheS1taW5pYXBwLTFoa2l2ZHNmYS1zZXJrYW5zLXByb2plY3RzLTk5OTFhN2YzLnZlcmNlbC5hcHAifQ",
+    "signature": "MHhzaWduYXR1cmU"
+  },
+  "frame": {
+    "name": "CrossPay",
+    "iconUrl": "https://crosspay-miniapp-1hkivdsfa-serkans-projects-9991a7f3.vercel.app/icon-192.png",
+    "splashImageUrl": "https://crosspay-miniapp-1hkivdsfa-serkans-projects-9991a7f3.vercel.app/splash.png",
+    "splashBackgroundColor": "#667eea",
+    "homeUrl": "https://crosspay-miniapp-1hkivdsfa-serkans-projects-9991a7f3.vercel.app",
+    "webhookUrl": "https://crosspay-miniapp-1hkivdsfa-serkans-projects-9991a7f3.vercel.app/api/webhook"
+  },
+  "primaryCategory": "finance",
+  "name": "CrossPay",
+  "description": "Instant crypto payments for merchants on Base blockchain with minimal fees",
+  "shortDescription": "QR payments on Base with 1% fees",
+  "version": "1.0.0",
+  "developer": {
+    "name": "CrossPay Team",
+    "url": "https://github.com/serayd61/crosspay-base",
+    "fid": 12345
+  },
+  "website": "https://crosspay-miniapp-1hkivdsfa-serkans-projects-9991a7f3.vercel.app",
+  "socialLinks": {
+    "github": "https://github.com/serayd61/crosspay-base",
+    "twitter": "",
+    "discord": ""
+  },
+  "categories": ["finance", "payments", "business"],
+  "tags": ["crypto", "payments", "qr", "merchant", "base"],
+  "screenshots": [
+    {
+      "url": "https://crosspay-miniapp-1hkivdsfa-serkans-projects-9991a7f3.vercel.app/screenshot-1.png",
+      "width": 390,
+      "height": 844,
+      "alt": "Payment interface with QR scanner"
+    },
+    {
+      "url": "https://crosspay-miniapp-1hkivdsfa-serkans-projects-9991a7f3.vercel.app/screenshot-2.png",
+      "width": 390,
+      "height": 844,
+      "alt": "Merchant dashboard with analytics"
+    }
+  ],
+  "permissions": [
+    "id",
+    "camera",
+    "notifications"
+  ]
+}
